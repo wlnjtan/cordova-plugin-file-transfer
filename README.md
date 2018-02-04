@@ -49,7 +49,7 @@ With the new features introduced in [XMLHttpRequest](https://developer.mozilla.o
 ## Installation
 
 ```bash
-cordova plugin add cordova-plugin-file-transfer
+cordova plugin add https://github.com/apache/cordova-plugin-file-transfer.git
 ```
 
 ## Supported Platforms
