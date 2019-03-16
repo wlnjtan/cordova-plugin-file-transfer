@@ -193,37 +193,16 @@ public class FileTransfer extends CordovaPlugin {
             String target = args.getString(1);
             this._source = source;
             this._target = target;
-          if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(cordova.getActivity(),
-                     Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                    LOG.d(LOG_TAG, "Need to require permission");
-
-              // Should we show an explanation?
-              if (ActivityCompat.shouldShowRequestPermissionRationale(cordova.getActivity(),
-                Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                     //User even denied permission and checked "don't remind again"
-                     
-                     LOG.d(LOG_TAG, "Permission Denied");
-                     // Show an expanation to the user *asynchronously* -- don't block
-                     // this thread waiting for the user's response! After the user
-                     // sees the explanation, try again to request the permission.
-                     callbackContext.error("permission denied");
-                     return false;
-              } else {
-                     // No explanation needed, we can request the permission.
-                     // MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE is an
-                     // app-defined int constant. The callback method gets the
-                     // result of the request.
-                     PermissionHelper.requestPermission(this, 128, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-                     //ActivityCompat.requestPermissions(cordova.getActivity(),
-                      //new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                     //123);
-                     return true;
-              }
+            boolean saveFilePermission = PermissionHelper.hasPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                && PermissionHelper.hasPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            //https://github.com/googlesamples/easypermissions    
+            if(!saveFilePermission) {
+                 PermissionHelper.requestPermissions(this, 128,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE});
+                 return true;
             }
-          }
-          if (action.equals("upload")) {
-              upload(source, target, args, callbackContext);
+            if (action.equals("upload")) {
+               upload(source, target, args, callbackContext);
             } else {
                 download(source, target, args, callbackContext);
             }
@@ -231,7 +210,7 @@ public class FileTransfer extends CordovaPlugin {
         } else if (action.equals("abort")) {
             String objectId = args.getString(0);
             abort(objectId);
-            callbackContext.success();
+            _callbackContext.success();
             return true;
         }
         return false;
@@ -240,23 +219,28 @@ public class FileTransfer extends CordovaPlugin {
 
   @Override
   public void onRequestPermissionResult(int requestCode, String permissions[], int[] grantResults)  throws JSONException {
-    switch (requestCode) {
-      case 128: {
-        if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-              _callbackContext.error("permission denied");
-              LOG.d(LOG_TAG, "permission denied");
-        } else {
-          if (_action.equals("upload")) {
-            upload(_source, _target, _args, _callbackContext);
-          } else {
-            download(_source, _target, _args, _callbackContext);
-          }
-
+       for (int r : grantResults) {
+            if (r == PackageManager.PERMISSION_DENIED) {
+                //this._callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, PERMISSION_DENIED_ERROR));
+                _callbackContext.error("permission denied");
+                LOG.d(LOG_TAG, "permission denied");
+                return;
+            }
         }
-        return;
-      }
-
-     }
+        switch (requestCode) {
+            case 128:
+               //if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                 //    _callbackContext.error("permission denied");
+                   //  LOG.d(LOG_TAG, "permission denied");
+                 //     return;
+               //} 
+                 if (_action.equals("upload")) {
+                   upload(_source, _target, _args, _callbackContext);
+                 } else {
+                   download(_source, _target, _args, _callbackContext);
+                 }
+               return;
+         }
    }
 
     private static void addHeadersToRequest(URLConnection connection, JSONObject headers) {
